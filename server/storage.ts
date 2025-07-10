@@ -5,6 +5,8 @@ import {
   transactions, type Transaction, type InsertTransaction,
   telegramConfig, type TelegramConfig, type InsertTelegramConfig
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -364,4 +366,212 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database Storage Implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  // Categories
+  async getAllCategories(): Promise<Category[]> {
+    return await db.select().from(categories);
+  }
+
+  async getCategoryById(id: number): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category || undefined;
+  }
+
+  async createCategory(insertCategory: InsertCategory): Promise<Category> {
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+
+  async updateCategory(id: number, updates: Partial<InsertCategory>): Promise<Category | undefined> {
+    const [category] = await db
+      .update(categories)
+      .set(updates)
+      .where(eq(categories.id, id))
+      .returning();
+    return category || undefined;
+  }
+
+  async deleteCategory(id: number): Promise<boolean> {
+    const result = await db.delete(categories).where(eq(categories.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Accounts
+  async getAllAccounts(): Promise<Account[]> {
+    return await db.select().from(accounts);
+  }
+
+  async getAccountById(id: number): Promise<Account | undefined> {
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+    return account || undefined;
+  }
+
+  async getAccountsByUserId(userId: number): Promise<Account[]> {
+    return await db.select().from(accounts).where(eq(accounts.userId, userId));
+  }
+
+  async createAccount(insertAccount: InsertAccount): Promise<Account> {
+    const [account] = await db
+      .insert(accounts)
+      .values(insertAccount)
+      .returning();
+    return account;
+  }
+
+  async updateAccount(id: number, updates: Partial<InsertAccount>): Promise<Account | undefined> {
+    const [account] = await db
+      .update(accounts)
+      .set(updates)
+      .where(eq(accounts.id, id))
+      .returning();
+    return account || undefined;
+  }
+
+  async deleteAccount(id: number): Promise<boolean> {
+    const result = await db.delete(accounts).where(eq(accounts.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Transactions
+  async getAllTransactions(): Promise<Transaction[]> {
+    return await db.select().from(transactions).orderBy(sql`${transactions.createdAt} DESC`);
+  }
+
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    const [transaction] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return transaction || undefined;
+  }
+
+  async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
+    return await db.select().from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(sql`${transactions.createdAt} DESC`);
+  }
+
+  async getTransactionsByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
+    return await db.select().from(transactions)
+      .where(and(
+        gte(transactions.transactionDate, startDate),
+        lte(transactions.transactionDate, endDate)
+      ));
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const [transaction] = await db
+      .insert(transactions)
+      .values(insertTransaction)
+      .returning();
+    
+    // Update account balance
+    if (transaction.accountId) {
+      const account = await this.getAccountById(transaction.accountId);
+      if (account) {
+        const currentBalance = parseFloat(account.balance);
+        const transactionAmount = parseFloat(transaction.amount);
+        const newBalance = transaction.type === "income" 
+          ? currentBalance + transactionAmount 
+          : currentBalance - transactionAmount;
+        
+        await this.updateAccount(transaction.accountId, {
+          balance: newBalance.toFixed(2)
+        });
+      }
+    }
+    
+    return transaction;
+  }
+
+  async updateTransaction(id: number, updates: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    const [transaction] = await db
+      .update(transactions)
+      .set(updates)
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction || undefined;
+  }
+
+  async deleteTransaction(id: number): Promise<boolean> {
+    const transaction = await this.getTransactionById(id);
+    if (!transaction) return false;
+    
+    // Reverse account balance change
+    if (transaction.accountId) {
+      const account = await this.getAccountById(transaction.accountId);
+      if (account) {
+        const currentBalance = parseFloat(account.balance);
+        const transactionAmount = parseFloat(transaction.amount);
+        const newBalance = transaction.type === "income" 
+          ? currentBalance - transactionAmount 
+          : currentBalance + transactionAmount;
+        
+        await this.updateAccount(transaction.accountId, {
+          balance: newBalance.toFixed(2)
+        });
+      }
+    }
+    
+    const result = await db.delete(transactions).where(eq(transactions.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Telegram Config
+  async getTelegramConfig(): Promise<TelegramConfig | undefined> {
+    const [config] = await db.select().from(telegramConfig).limit(1);
+    return config || undefined;
+  }
+
+  async createTelegramConfig(insertConfig: InsertTelegramConfig): Promise<TelegramConfig> {
+    const [config] = await db
+      .insert(telegramConfig)
+      .values(insertConfig)
+      .returning();
+    return config;
+  }
+
+  async updateTelegramConfig(id: number, updates: Partial<InsertTelegramConfig>): Promise<TelegramConfig | undefined> {
+    const [config] = await db
+      .update(telegramConfig)
+      .set(updates)
+      .where(eq(telegramConfig.id, id))
+      .returning();
+    return config || undefined;
+  }
+}
+
+export const storage = new DatabaseStorage();

@@ -26,10 +26,12 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions (configured for PostgreSQL storage)
 
 ### Data Layer
-- **Database**: PostgreSQL (configured for Neon Database)
+- **Database**: PostgreSQL (configured with Replit Database)
 - **ORM**: Drizzle ORM for type-safe database operations
-- **Schema Management**: Drizzle migrations in `./migrations` directory
+- **Schema Management**: Database schema defined in `shared/schema.ts` with push deployment
+- **Storage**: DatabaseStorage class implementing complete CRUD operations
 - **Validation**: Zod schemas for runtime type validation
+- **Seeding**: Initial data includes admin user, default categories, and sample accounts
 
 ## Key Components
 
@@ -113,9 +115,11 @@ The application uses a well-structured PostgreSQL schema with the following main
 - **Deployment**: Single-command deployment with `npm run build && npm start`
 
 ### Database Management
-- **Migrations**: Drizzle Kit handles schema migrations
-- **Schema**: Centralized in `shared/schema.ts` for type sharing
-- **Push Commands**: `npm run db:push` for schema updates
+- **Schema Push**: `npm run db:push` deploys schema changes to PostgreSQL
+- **Schema**: Centralized in `shared/schema.ts` with relations for type sharing
+- **Connection**: `server/db.ts` configures Neon serverless PostgreSQL
+- **Storage Layer**: Complete replacement of MemStorage with DatabaseStorage
+- **Initial Data**: Seeded with admin user (admin/demo123), categories, and accounts
 
 ### Architecture Benefits
 1. **Type Safety**: Full-stack TypeScript with shared schemas
