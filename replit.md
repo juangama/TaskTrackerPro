@@ -4,6 +4,15 @@
 
 This is a full-stack financial management application built for small/medium businesses. The application provides comprehensive financial tracking including expenses, income, bank accounts, and loans management. It features a modern React frontend with Express.js backend, PostgreSQL database with Drizzle ORM, and includes plans for Telegram bot integration for remote transaction recording.
 
+## Recent Changes (July 10, 2025)
+
+- ✓ Added "third party" field to transaction schema for tracking money recipients/providers
+- ✓ Updated transaction creation modal with dynamic third party input field
+- ✓ Fixed sidebar DOM nesting warnings by replacing anchor tags with spans
+- ✓ Enhanced transaction table to display third party information
+- ✓ Improved error handling and debugging in transaction creation
+- ✓ Confirmed admin category management panel is fully functional in settings page
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

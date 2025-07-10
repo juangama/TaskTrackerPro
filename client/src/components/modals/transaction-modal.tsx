@@ -42,7 +42,13 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("API request data:", data);
       const response = await apiRequest("POST", "/api/transactions", data);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -56,10 +62,11 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
       onClose();
       resetForm();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Transaction error:", error);
       toast({
         title: "Error",
-        description: "No se pudo crear la transacción",
+        description: error.message || "No se pudo crear la transacción",
         variant: "destructive",
       });
     },
@@ -90,12 +97,19 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
       return;
     }
 
-    createTransactionMutation.mutate({
-      ...formData,
-      amount: parseFloat(formData.amount),
+    const transactionData = {
+      type: formData.type,
+      amount: formData.amount,
+      description: formData.description,
+      thirdParty: formData.thirdParty,
       categoryId: parseInt(formData.categoryId),
       accountId: parseInt(formData.accountId),
-    });
+      paymentMethod: formData.paymentMethod,
+      notes: formData.notes,
+    };
+
+    console.log("Submitting transaction:", transactionData);
+    createTransactionMutation.mutate(transactionData);
   };
 
   const handleChange = (field: string, value: string) => {
