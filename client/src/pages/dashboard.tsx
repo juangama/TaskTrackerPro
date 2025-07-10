@@ -73,11 +73,18 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-gray-800">
                   {summary ? formatCurrency(summary.totalBalance) : "$0.00"}
                 </p>
-                <div className="flex items-center mt-2">
-                  <ArrowUp className="text-success text-sm mr-1" size={16} />
-                  <span className="text-success text-sm font-medium">+12.5%</span>
-                  <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
-                </div>
+                {summary && summary.prevMonthIncome !== undefined && (
+                  <div className="flex items-center mt-2">
+                    {summary.totalBalance > 0 ? (
+                      <ArrowUp className="text-success text-sm mr-1" size={16} />
+                    ) : (
+                      <ArrowDown className="text-error text-sm mr-1" size={16} />
+                    )}
+                    <span className={`text-sm font-medium ${summary.totalBalance > 0 ? 'text-success' : 'text-error'}`}>
+                      Balance total
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <Wallet className="text-primary" size={24} />
@@ -94,11 +101,19 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-gray-800">
                   {summary ? formatCurrency(summary.monthlyIncome) : "$0.00"}
                 </p>
-                <div className="flex items-center mt-2">
-                  <ArrowUp className="text-success text-sm mr-1" size={16} />
-                  <span className="text-success text-sm font-medium">+8.2%</span>
-                  <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
-                </div>
+                {summary && summary.incomeChangePercent !== undefined && (
+                  <div className="flex items-center mt-2">
+                    {summary.incomeChangePercent >= 0 ? (
+                      <ArrowUp className="text-success text-sm mr-1" size={16} />
+                    ) : (
+                      <ArrowDown className="text-error text-sm mr-1" size={16} />
+                    )}
+                    <span className={`text-sm font-medium ${summary.incomeChangePercent >= 0 ? 'text-success' : 'text-error'}`}>
+                      {summary.incomeChangePercent >= 0 ? '+' : ''}{summary.incomeChangePercent.toFixed(1)}%
+                    </span>
+                    <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
+                  </div>
+                )}
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                 <TrendingUp className="text-success" size={24} />
@@ -115,11 +130,19 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-gray-800">
                   {summary ? formatCurrency(summary.monthlyExpenses) : "$0.00"}
                 </p>
-                <div className="flex items-center mt-2">
-                  <ArrowUp className="text-error text-sm mr-1" size={16} />
-                  <span className="text-error text-sm font-medium">+5.1%</span>
-                  <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
-                </div>
+                {summary && summary.expenseChangePercent !== undefined && (
+                  <div className="flex items-center mt-2">
+                    {summary.expenseChangePercent >= 0 ? (
+                      <ArrowUp className="text-error text-sm mr-1" size={16} />
+                    ) : (
+                      <ArrowDown className="text-success text-sm mr-1" size={16} />
+                    )}
+                    <span className={`text-sm font-medium ${summary.expenseChangePercent >= 0 ? 'text-error' : 'text-success'}`}>
+                      {summary.expenseChangePercent >= 0 ? '+' : ''}{summary.expenseChangePercent.toFixed(1)}%
+                    </span>
+                    <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
+                  </div>
+                )}
               </div>
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                 <TrendingDown className="text-error" size={24} />
@@ -136,11 +159,14 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-gray-800">
                   {summary ? formatCurrency(summary.pendingLoans) : "$0.00"}
                 </p>
-                <div className="flex items-center mt-2">
-                  <ArrowDown className="text-success text-sm mr-1" size={16} />
-                  <span className="text-success text-sm font-medium">-15.3%</span>
-                  <span className="text-gray-500 text-sm ml-1">vs mes anterior</span>
-                </div>
+                {summary && summary.pendingLoans !== undefined && (
+                  <div className="flex items-center mt-2">
+                    <ArrowDown className="text-success text-sm mr-1" size={16} />
+                    <span className="text-success text-sm font-medium">
+                      Préstamos totales
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                 <HandCoins className="text-warning" size={24} />

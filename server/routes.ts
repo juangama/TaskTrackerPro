@@ -242,6 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const totalBalance = accounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
     
+    // Current month calculations
     const currentMonth = new Date();
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
@@ -258,6 +259,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const monthlyExpenses = monthlyTransactions
       .filter(t => t.type === "expense")
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    // Previous month calculations for comparison
+    const prevMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0);
+    
+    const prevMonthTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.transactionDate!);
+      return transactionDate >= prevMonthStart && transactionDate <= prevMonthEnd;
+    });
+    
+    const prevMonthIncome = prevMonthTransactions
+      .filter(t => t.type === "income")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    
+    const prevMonthExpenses = prevMonthTransactions
+      .filter(t => t.type === "expense")
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    // Calculate percentage changes
+    const incomeChange = prevMonthIncome > 0 ? ((monthlyIncome - prevMonthIncome) / prevMonthIncome) * 100 : 0;
+    const expenseChange = prevMonthExpenses > 0 ? ((monthlyExpenses - prevMonthExpenses) / prevMonthExpenses) * 100 : 0;
     
     const pendingLoans = accounts
       .filter(a => a.type === "loan")
@@ -268,7 +290,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       monthlyIncome,
       monthlyExpenses,
       pendingLoans,
-      netCashFlow: monthlyIncome - monthlyExpenses
+      netCashFlow: monthlyIncome - monthlyExpenses,
+      incomeChangePercent: incomeChange,
+      expenseChangePercent: expenseChange,
+      prevMonthIncome,
+      prevMonthExpenses
     });
   });
 
