@@ -280,6 +280,7 @@ export class MemStorage implements IStorage {
       paymentMethod: insertTransaction.paymentMethod || null,
       receiptUrl: insertTransaction.receiptUrl || null,
       notes: insertTransaction.notes || null,
+      thirdParty: insertTransaction.thirdParty || null,
       id, 
       createdAt: new Date(),
       transactionDate: insertTransaction.transactionDate || new Date()

@@ -38,6 +38,7 @@ export const transactions = pgTable("transactions", {
   type: text("type").notNull(), // "expense" or "income"
   amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
   description: text("description").notNull(),
+  thirdParty: text("third_party"), // Person or company receiving/providing the money
   categoryId: integer("category_id").references(() => categories.id),
   accountId: integer("account_id").references(() => accounts.id),
   paymentMethod: text("payment_method"), // "cash", "credit_card", "debit_card", "transfer"

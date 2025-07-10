@@ -20,6 +20,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
     type: "expense",
     amount: "",
     description: "",
+    thirdParty: "",
     categoryId: "",
     accountId: "",
     paymentMethod: "cash",
@@ -69,6 +70,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
       type: "expense",
       amount: "",
       description: "",
+      thirdParty: "",
       categoryId: "",
       accountId: "",
       paymentMethod: "cash",
@@ -207,6 +209,18 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="Descripción de la transacción"
               required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="thirdParty" className="block text-sm font-medium text-gray-700 mb-2">
+              Tercero {formData.type === "expense" ? "(Proveedor/Beneficiario)" : "(Cliente/Pagador)"}
+            </Label>
+            <Input
+              id="thirdParty"
+              value={formData.thirdParty}
+              onChange={(e) => handleChange("thirdParty", e.target.value)}
+              placeholder={formData.type === "expense" ? "Nombre del proveedor o beneficiario" : "Nombre del cliente o quien paga"}
             />
           </div>
           
