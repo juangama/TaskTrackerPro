@@ -150,7 +150,9 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
     const user: User = { 
-      ...insertUser, 
+      ...insertUser,
+      role: insertUser.role || "employee",
+      telegramUserId: insertUser.telegramUserId || null,
       id, 
       createdAt: new Date() 
     };
@@ -179,7 +181,8 @@ export class MemStorage implements IStorage {
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const id = this.currentCategoryId++;
     const category: Category = { 
-      ...insertCategory, 
+      ...insertCategory,
+      color: insertCategory.color || "#1976D2",
       id, 
       createdAt: new Date() 
     };
@@ -216,7 +219,11 @@ export class MemStorage implements IStorage {
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
     const id = this.currentAccountId++;
     const account: Account = { 
-      ...insertAccount, 
+      ...insertAccount,
+      userId: insertAccount.userId || null,
+      balance: insertAccount.balance || "0.00",
+      bankName: insertAccount.bankName || null,
+      accountNumber: insertAccount.accountNumber || null,
       id, 
       createdAt: new Date() 
     };
@@ -264,7 +271,13 @@ export class MemStorage implements IStorage {
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const id = this.currentTransactionId++;
     const transaction: Transaction = { 
-      ...insertTransaction, 
+      ...insertTransaction,
+      userId: insertTransaction.userId || null,
+      categoryId: insertTransaction.categoryId || null,
+      accountId: insertTransaction.accountId || null,
+      paymentMethod: insertTransaction.paymentMethod || null,
+      receiptUrl: insertTransaction.receiptUrl || null,
+      notes: insertTransaction.notes || null,
       id, 
       createdAt: new Date(),
       transactionDate: insertTransaction.transactionDate || new Date()
@@ -332,7 +345,8 @@ export class MemStorage implements IStorage {
   async createTelegramConfig(insertConfig: InsertTelegramConfig): Promise<TelegramConfig> {
     const id = this.currentConfigId++;
     const config: TelegramConfig = { 
-      ...insertConfig, 
+      ...insertConfig,
+      isActive: insertConfig.isActive || null,
       id, 
       createdAt: new Date() 
     };

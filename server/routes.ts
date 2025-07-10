@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -11,10 +11,21 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Extend Request interface to include session and userId
+declare module 'express-serve-static-core' {
+  interface Request {
+    session?: {
+      userId?: number;
+      destroy: (callback: () => void) => void;
+    };
+    userId?: number;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication middleware
-  const requireAuth = (req: any, res: any, next: any) => {
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
@@ -33,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      req.session.userId = user.id;
+      req.session!.userId = user.id;
       res.json({ 
         user: { 
           id: user.id, 
@@ -49,13 +60,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {
+    req.session!.destroy(() => {
       res.json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
-    const user = await storage.getUser(req.userId);
+    const user = await storage.getUser(req.userId!);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -116,13 +127,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Accounts routes
   app.get("/api/accounts", requireAuth, async (req, res) => {
-    const accounts = await storage.getAccountsByUserId(req.userId);
+    const accounts = await storage.getAccountsByUserId(req.userId!);
     res.json(accounts);
   });
 
   app.post("/api/accounts", requireAuth, async (req, res) => {
     try {
-      const accountData = insertAccountSchema.parse({ ...req.body, userId: req.userId });
+      const accountData = insertAccountSchema.parse({ ...req.body, userId: req.userId! });
       const account = await storage.createAccount(accountData);
       res.status(201).json(account);
     } catch (error) {
@@ -168,12 +179,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         new Date(endDate as string)
       );
     } else {
-      transactions = await storage.getTransactionsByUserId(req.userId);
+      transactions = await storage.getTransactionsByUserId(req.userId!);
     }
     
     // Include category and account details
     const categories = await storage.getAllCategories();
-    const accounts = await storage.getAccountsByUserId(req.userId);
+    const accounts = await storage.getAccountsByUserId(req.userId!);
     
     const categoriesMap = new Map(categories.map(c => [c.id, c]));
     const accountsMap = new Map(accounts.map(a => [a.id, a]));
@@ -189,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const transactionData = insertTransactionSchema.parse({ ...req.body, userId: req.userId });
+      const transactionData = insertTransactionSchema.parse({ ...req.body, userId: req.userId! });
       const transaction = await storage.createTransaction(transactionData);
       res.status(201).json(transaction);
     } catch (error) {
@@ -226,8 +237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Analytics routes
   app.get("/api/analytics/summary", requireAuth, async (req, res) => {
-    const transactions = await storage.getTransactionsByUserId(req.userId);
-    const accounts = await storage.getAccountsByUserId(req.userId);
+    const transactions = await storage.getTransactionsByUserId(req.userId!);
+    const accounts = await storage.getAccountsByUserId(req.userId!);
     
     const totalBalance = accounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
     
@@ -262,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/analytics/expenses-by-category", requireAuth, async (req, res) => {
-    const transactions = await storage.getTransactionsByUserId(req.userId);
+    const transactions = await storage.getTransactionsByUserId(req.userId!);
     const categories = await storage.getAllCategories();
     
     const expenses = transactions.filter(t => t.type === "expense");
@@ -280,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/analytics/monthly-trends", requireAuth, async (req, res) => {
-    const transactions = await storage.getTransactionsByUserId(req.userId);
+    const transactions = await storage.getTransactionsByUserId(req.userId!);
     
     const monthlyData: Record<string, { income: number; expenses: number }> = {};
     
