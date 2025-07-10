@@ -1,0 +1,69 @@
+# Rol:
+Actúa como un desarrollador Full-Stack experto, con especialización en la creación de aplicaciones financieras (FinTech) usando un stack moderno (React + FastAPI), arquitectura de microservicios y la integración de bots con APIs. Tu objetivo es diseñar y generar el código base para una aplicación web completa y robusta en Replit.
+# Nombre del Proyecto:
+FINANZAS PRO EMPRESA - Sistema Integral de Gestión de Gastos y Finanzas con Bot de Telegram.
+# Objetivo Principal:
+Crear una aplicación web para la gestión financiera de una pequeña/mediana empresa. La aplicación debe permitir el seguimiento de gastos, ingresos, cuentas bancarias y préstamos. El núcleo de la innovación será un bot de Telegram que permitirá registrar gastos de forma remota y automática mediante texto o imágenes de recibos.
+## Módulos y Características Principales:
+(Esta sección no cambia, ya que describe la lógica de negocio, no la tecnología.)
+1. Módulo de Autenticación y Gestión de Usuarios:
+Sistema de registro e inicio de sesión para los empleados de la empresa.
+(Variante) Roles de usuario: Admin (acceso total) y Empleado (solo puede registrar gastos).
+2. Módulo de Cuentas Financieras:
+Cuentas Propias (Ahorros/Corrientes):
+Crear, editar y eliminar cuentas con un saldo inicial.
+Cuentas de Terceros (Préstamos):
+Registrar préstamos recibidos, monto total y saldo pendiente.
+Permitir registrar pagos (abonos) a estos préstamos.
+3. Módulo de Transacciones (Ingresos y Gastos):
+Registro de Gastos:
+Campos: Fecha, Monto, Moneda, Categoría (configurable), Descripción, Método de Pago, Recibo/Factura (subida de archivo).
+Registro de Ingresos (Ventas):
+Campos: Fecha, Monto, Moneda, Categoría, Descripción, Cliente, Cuenta de Destino.
+4. Módulo de Dashboard Financiero Interactivo:
+Vista General: Balance Total, Flujo de Caja, Gráfico circular de gastos.
+Análisis Cruzado: Gráfico comparativo de Ingresos vs. Gastos.
+Filtros: por rango de fechas, cuenta o categoría.
+5. Módulo de Integración con Bot de Telegram:
+Conexión segura a la API del backend.
+Funcionalidad 1: Registro por Texto (/gasto <monto> <categoría> <descripción>).
+Funcionalidad 2: Registro por Imagen (OCR) para extraer datos de recibos.
+Funcionalidad 3: Consultas Rápidas (/saldo, /resumen_hoy).
+## Pila Tecnológica Sugerida (Stack Moderno para Replit):
+Backend: Python con el framework FastAPI. Es moderno, rápido, ideal para APIs y tiene autogeneración de documentación.
+Frontend: React usando Vite como empaquetador de desarrollo.
+Gestión de Estado: Utiliza el Context API de React para un manejo simple del estado global (como la información del usuario autenticado).
+Routing: React Router para la navegación entre páginas (Dashboard, Cuentas, Transacciones).
+Peticiones a la API: Axios para comunicarse con el backend de FastAPI.
+Gráficos del Dashboard: react-chartjs-2, un wrapper de Chart.js para React.
+Estilos: Tailwind CSS o CSS Modules para un diseño limpio y componente-izado.
+Base de Datos: Supabase (PostgreSQL). Ofrece base de datos, autenticación, y almacenamiento de archivos (para los recibos) con un plan gratuito generoso.
+Bot de Telegram: Librería python-telegram-bot.
+OCR para Recibos: Librería pytesseract con el motor Tesseract OCR de Google.
+## Arquitectura y Flujo de Datos:
+Frontend (Aplicación React con Vite) se ejecuta en el navegador del cliente. Se comunica exclusivamente a través de peticiones HTTP con el Backend API.
+Backend (API FastAPI) expone endpoints RESTful seguros para ser consumidos por el frontend y el bot. Es el único que tiene acceso a la base de datos.
+Bot de Telegram actúa como un cliente más, comunicándose con los mismos endpoints de la API del backend para registrar gastos o realizar consultas.
+Base de Datos y Almacenamiento (Supabase) centraliza todos los datos y archivos de forma segura en la nube.
+## Primeros Pasos Solicitados a la IA:
+Configura un entorno de Replit para un proyecto Monorepo:
+Crea dos carpetas principales en la raíz: backend y frontend.
+Configura el archivo .replit para ejecutar ambos servicios simultáneamente. El comando run debería ser algo como:
+concurrently "cd backend && uvicorn main:app --host 0.0.0.0 --port 8001" "cd frontend && npm run dev"
+(Esto requerirá instalar concurrently en el replit.nix).
+Configura el Backend en la carpeta backend/:
+Crea los archivos main.py, pyproject.toml (o requirements.txt).
+Instala: fastapi, uvicorn, python-telegram-bot, supabase-client, pytesseract, Pillow.
+Genera el código inicial de la app FastAPI con un endpoint de prueba (/api/health).
+Define los modelos Pydantic para User, Account, Transaction.
+Implementa la configuración de CORS para permitir peticiones desde el frontend.
+Configura el Frontend en la carpeta frontend/:
+Usa los comandos de shell para inicializar un nuevo proyecto de React con Vite: npm create vite@latest . -- --template react.
+Instala las dependencias necesarias: npm install axios react-router-dom chart.js react-chartjs-2.
+Crea una estructura de carpetas básica: /src/components, /src/pages, /src/api.
+Genera componentes de ejemplo: Dashboard.jsx, Login.jsx, Layout.jsx.
+Configura un api/axiosConfig.js para centralizar la URL base del backend (http://127.0.0.1:8001/api).
+Crea el esqueleto del bot de Telegram (backend/bot/main.py):
+Incluye el código para conectar con la API de Telegram (con un placeholder para el token).
+Implementa un manejador para el comando /start que interactúe con el backend.
+Consideración Final: Por favor, añade comentarios claros en el código explicando las partes clave, especialmente la configuración de las APIs, la comunicación entre frontend y backend, el flujo del OCR y la lógica de negocio en los endpoints.
