@@ -5,3 +5,18 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .vercel
+.env*.local
+{
+  "status": "error",
+  "database": {
+    "connected": false,
+    "url": "configured",
+    "type": "Neon PostgreSQL",
+    "urlFormat": "postgresql://neondb_owner:npg_OdJCMlj79gEY@ep-royal-scene-ac8mr4w9-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+  },
+  "error": "Invalid URL",
+  "errorDetails": {
+    "name": "TypeError",
+    "code": "ERR_INVALID_URL"
+  }
+}

@@ -202,6 +202,41 @@ app.get('/api/auth/me', (req, res) => {
   }
 });
 
+// --- CREACIÓN DE CATEGORÍA ---
+import { insertCategorySchema, categories } from '../shared/schema';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
+
+// Configuración de Neon para serverless
+neonConfig.webSocketConstructor = ws;
+
+// Instancia de pool y drizzle solo si no existe ya (evita duplicados en serverless)
+let db;
+if (!globalThis._vercelDbPool) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  db = drizzle(pool);
+  globalThis._vercelDbPool = db;
+} else {
+  db = globalThis._vercelDbPool;
+}
+
+app.post('/api/categories', async (req, res) => {
+  try {
+    // Validar datos de entrada
+    const data = insertCategorySchema.parse(req.body);
+    // Insertar en la base de datos
+    const [category] = await db.insert(categories).values(data).returning();
+    res.status(201).json(category);
+  } catch (error) {
+    console.error('Error creando categoría:', error);
+    if (error.name === 'ZodError') {
+      return res.status(400).json({ message: 'Datos inválidos', errors: error.errors });
+    }
+    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+  }
+});
+
 // Database connection test endpoint
 app.get('/api/db-test', async (req, res) => {
   try {
