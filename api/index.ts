@@ -216,13 +216,20 @@ app.get('/api/db-test', async (req, res) => {
       });
     }
     
+    // Log URL format for debugging (without exposing credentials)
+    const urlParts = dbUrl.split('@');
+    const urlInfo = urlParts.length > 1 ? 
+      `${urlParts[0].split('://')[0]}://***@${urlParts[1].split('/')[0]}` : 
+      'Invalid URL format';
+    
     // Try to connect using a simple test
     const { Pool } = await import('@neondatabase/serverless');
-    const pool = new Pool({ connectionString: dbUrl });
     
     try {
+      const pool = new Pool({ connectionString: dbUrl });
+      
       const client = await pool.connect();
-      await client.query('SELECT 1 as test');
+      const result = await client.query('SELECT NOW() as current_time, 1 as test');
       client.release();
       await pool.end();
       
@@ -231,20 +238,26 @@ app.get('/api/db-test', async (req, res) => {
         database: {
           connected: true,
           url: 'configured',
-          type: 'Neon PostgreSQL'
+          type: 'Neon PostgreSQL',
+          urlFormat: urlInfo
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        dbTime: result.rows[0]?.current_time
       });
     } catch (dbError) {
-      await pool.end();
       res.json({
         status: 'error',
         database: {
           connected: false,
           url: 'configured',
-          type: 'Neon PostgreSQL'
+          type: 'Neon PostgreSQL',
+          urlFormat: urlInfo
         },
         error: dbError instanceof Error ? dbError.message : 'Database connection failed',
+        errorDetails: {
+          name: dbError instanceof Error ? dbError.name : 'Unknown',
+          code: (dbError as any)?.code || 'Unknown'
+        },
         timestamp: new Date().toISOString()
       });
     }
