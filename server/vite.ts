@@ -68,14 +68,11 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // For Vercel, serve from the client directory directly
-  const clientPath = path.resolve(import.meta.dirname, "..", "client");
-  
-  // Serve static files from client directory
-  app.use(express.static(clientPath));
-  
-  // Serve all routes to index.html for SPA
+  // For Vercel, serve from the built client files
+  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+
+  app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(clientPath, "index.html"));
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
