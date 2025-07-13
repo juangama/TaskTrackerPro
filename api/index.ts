@@ -212,28 +212,32 @@ import ws from 'ws';
 neonConfig.webSocketConstructor = ws;
 
 // Instancia de pool y drizzle solo si no existe ya (evita duplicados en serverless)
+const g = globalThis as any;
 let db;
-if (!globalThis._vercelDbPool) {
+if (!g._vercelDbPool) {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   db = drizzle(pool);
-  globalThis._vercelDbPool = db;
+  g._vercelDbPool = db;
 } else {
-  db = globalThis._vercelDbPool;
+  db = g._vercelDbPool;
 }
 
 app.post('/api/categories', async (req, res) => {
   try {
+    console.log('[POST /api/categories] Body:', req.body);
     // Validar datos de entrada
     const data = insertCategorySchema.parse(req.body);
     // Insertar en la base de datos
     const [category] = await db.insert(categories).values(data).returning();
+    console.log('[POST /api/categories] Created:', category);
     res.status(201).json(category);
   } catch (error) {
-    console.error('Error creando categoría:', error);
-    if (error.name === 'ZodError') {
-      return res.status(400).json({ message: 'Datos inválidos', errors: error.errors });
+    const err = error as Error & { name?: string; errors?: any };
+    console.error('[POST /api/categories] Error:', err);
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ message: 'Datos inválidos', errors: err.errors });
     }
-    res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+    res.status(500).json({ message: 'Error interno del servidor', error: err.message });
   }
 });
 
