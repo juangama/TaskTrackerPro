@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { authApi } from "./lib/auth";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -17,12 +17,49 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import NotFound from "@/pages/not-found";
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+interface AuthData {
+  user: User;
+}
+
 function AppContent() {
-  const { data: authData, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: () => authApi.getCurrentUser(),
-    retry: false,
-  });
+  const [authData, setAuthData] = useState<AuthData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Función para verificar autenticación manualmente
+  const checkAuth = async () => {
+    setIsLoading(true);
+    try {
+      const data = await authApi.getCurrentUser();
+      setAuthData(data);
+      setIsAuthenticated(true);
+    } catch (error) {
+      setAuthData(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para manejar login exitoso
+  const handleLoginSuccess = (data: AuthData) => {
+    setAuthData(data);
+    setIsAuthenticated(true);
+  };
+
+  // Función para manejar logout
+  const handleLogout = () => {
+    setAuthData(null);
+    setIsAuthenticated(false);
+  };
 
   if (isLoading) {
     return (
@@ -35,21 +72,23 @@ function AppContent() {
     );
   }
 
-  if (error || !authData) {
+  // Si no está autenticado, mostrar páginas de login/registro
+  if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
-        <Route component={Login} />
+        <Route path="/login" component={() => <Login onLoginSuccess={handleLoginSuccess} />} />
+        <Route path="/register" component={() => <Register onLoginSuccess={handleLoginSuccess} />} />
+        <Route component={() => <Login onLoginSuccess={handleLoginSuccess} />} />
       </Switch>
     );
   }
 
+  // Si está autenticado, mostrar la aplicación principal
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <Sidebar />
+      <Sidebar onLogout={handleLogout} />
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Header user={authData.user} />
+        <Header user={authData!.user} />
         <div className="flex-1 overflow-auto p-6">
           <Switch>
             <Route path="/" component={Dashboard} />
@@ -58,7 +97,7 @@ function AppContent() {
             <Route path="/accounts" component={Accounts} />
             <Route path="/analytics" component={Analytics} />
             <Route path="/telegram" component={Telegram} />
-            <Route path="/settings" component={Settings} />
+            <Route path="/settings" component={() => <Settings user={authData!.user} />} />
             <Route component={NotFound} />
           </Switch>
         </div>

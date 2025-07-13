@@ -9,7 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ChartLine, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
-export default function Register() {
+interface RegisterProps {
+  onLoginSuccess?: (data: any) => void;
+}
+
+export default function Register({ onLoginSuccess }: RegisterProps) {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -44,8 +48,10 @@ export default function Register() {
         title: "Registro exitoso",
         description: `Bienvenido, ${data.user.fullName}! Tu cuenta ha sido creada correctamente.`,
       });
-      // Redirect to dashboard after successful registration
-      window.location.href = "/dashboard";
+      // Llamar a la función callback si existe
+      if (onLoginSuccess) {
+        onLoginSuccess(data);
+      }
     },
     onError: (error: any) => {
       console.error("Registration error:", error);
@@ -83,43 +89,6 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!formData.username.trim()) {
-      toast({
-        title: "Error de validación",
-        description: "El nombre de usuario es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.username.length < 3) {
-      toast({
-        title: "Error de validación",
-        description: "El nombre de usuario debe tener al menos 3 caracteres",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast({
-        title: "Error de validación",
-        description: "El correo electrónico es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.fullName.trim()) {
-      toast({
-        title: "Error de validación",
-        description: "El nombre completo es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Error de validación",
@@ -128,21 +97,15 @@ export default function Register() {
       });
       return;
     }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: "Error de validación",
-        description: "La contraseña debe tener al menos 6 caracteres",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    
     registerMutation.mutate();
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
@@ -172,10 +135,10 @@ export default function Register() {
                 required
               />
             </div>
-
+            
             <div>
               <Label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre de usuario
+                Usuario
               </Label>
               <Input
                 id="username"
@@ -187,10 +150,10 @@ export default function Register() {
                 required
               />
             </div>
-
+            
             <div>
               <Label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Correo electrónico
+                Email
               </Label>
               <Input
                 id="email"
@@ -230,7 +193,7 @@ export default function Register() {
                 </button>
               </div>
             </div>
-
+            
             <div>
               <Label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirmar contraseña
@@ -258,31 +221,24 @@ export default function Register() {
                 </button>
               </div>
             </div>
-            
-            <Button
-              type="submit"
-              className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={registerMutation.isPending}
-            >
-              {registerMutation.isPending ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Creando cuenta...
-                </div>
-              ) : (
-                "Crear cuenta"
-              )}
-            </Button>
 
             <div className="text-center">
               <Link 
-                to="/login" 
+                href="/login" 
                 className="inline-flex items-center text-sm text-primary hover:text-blue-800 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                ¿Ya tienes cuenta? Inicia sesión
+                ¿Ya tienes cuenta? Inicia sesión aquí
               </Link>
             </div>
+            
+            <Button
+              type="submit"
+              className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors"
+              disabled={registerMutation.isPending}
+            >
+              {registerMutation.isPending ? "Creando cuenta..." : "Crear cuenta"}
+            </Button>
           </form>
         </CardContent>
       </Card>

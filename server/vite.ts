@@ -69,10 +69,37 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   // For Vercel, serve from the built client files
-  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  const distPath = path.resolve(process.cwd(), "dist");
+  const publicPath = path.resolve(distPath, "public");
 
-  app.use(express.static(distPath));
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Check if the dist directory exists
+  if (!fs.existsSync(distPath)) {
+    console.warn('Dist directory not found, serving development files');
+    return;
+  }
+
+  // Serve static files from dist/public
+  if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath));
+    console.log('Serving static files from:', publicPath);
+  } else {
+    // Fallback to dist directory
+    app.use(express.static(distPath));
+    console.log('Serving static files from:', distPath);
+  }
+
+  // Serve index.html for all routes (SPA)
+  app.use("*", (req, res) => {
+    const indexPath = fs.existsSync(publicPath) 
+      ? path.resolve(publicPath, "index.html")
+      : path.resolve(distPath, "index.html");
+    
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({ 
+        message: "Static files not found. Please run 'npm run build' first." 
+      });
+    }
   });
 }

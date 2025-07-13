@@ -31,12 +31,22 @@ const createTransactionSchema = z.object({
   paymentMethod: z.string().optional(),
   notes: z.string().optional(),
   transactionDate: z.string().min(1, "La fecha de transacción es requerida").transform((val) => {
-    // Asegurar que la fecha esté en formato ISO
-    const date = new Date(val);
+    // Mejorar la validación de fecha
+    let date: Date;
+    
+    // Si la fecha ya está en formato ISO completo, usarla directamente
+    if (val.includes('T') && val.includes('Z')) {
+      date = new Date(val);
+    } else {
+      // Si es solo fecha (YYYY-MM-DD), agregar tiempo
+      date = new Date(val + 'T12:00:00.000Z');
+    }
+    
     if (isNaN(date.getTime())) {
       throw new Error("Fecha inválida");
     }
-    return val;
+    
+    return date.toISOString().split('T')[0]; // Retornar solo la fecha en formato YYYY-MM-DD
   }),
 });
 
@@ -51,12 +61,22 @@ const updateTransactionSchema = z.object({
   paymentMethod: z.string().optional(),
   notes: z.string().optional(),
   transactionDate: z.string().min(1, "La fecha de transacción es requerida").transform((val) => {
-    // Asegurar que la fecha esté en formato ISO
-    const date = new Date(val);
+    // Mejorar la validación de fecha
+    let date: Date;
+    
+    // Si la fecha ya está en formato ISO completo, usarla directamente
+    if (val.includes('T') && val.includes('Z')) {
+      date = new Date(val);
+    } else {
+      // Si es solo fecha (YYYY-MM-DD), agregar tiempo
+      date = new Date(val + 'T12:00:00.000Z');
+    }
+    
     if (isNaN(date.getTime())) {
       throw new Error("Fecha inválida");
     }
-    return val;
+    
+    return date.toISOString().split('T')[0]; // Retornar solo la fecha en formato YYYY-MM-DD
   }).optional(),
 });
 
@@ -355,11 +375,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = createTransactionSchema.parse(req.body);
       console.log("Validated transaction data:", validatedData);
       
-      // Transform the data for the database
+      // Transform the data for the database with better date handling
       const transactionData = {
         ...validatedData,
         userId: req.userId!,
-        transactionDate: new Date(validatedData.transactionDate + 'T12:00:00.000Z'), // Usar mediodía para evitar problemas de zona horaria
+        transactionDate: new Date(validatedData.transactionDate + 'T12:00:00.000Z'),
       };
       
       // Validar que la fecha sea válida
@@ -399,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedUpdates = updateTransactionSchema.parse(req.body);
       console.log("Validated update data:", validatedUpdates);
       
-      // Transform the data for the database
+      // Transform the data for the database with better date handling
       const updateData: any = { ...validatedUpdates };
       if (validatedUpdates.transactionDate) {
         const transactionDate = new Date(validatedUpdates.transactionDate + 'T12:00:00.000Z');

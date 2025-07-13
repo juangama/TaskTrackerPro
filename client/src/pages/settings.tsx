@@ -4,16 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { authApi, User } from "@/lib/auth";
-import { Plus, Edit, Trash2, Camera } from "lucide-react";
+import { Plus, X, Camera, Edit, Trash2 } from "lucide-react";
 
-export default function Settings() {
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+interface SettingsProps {
+  user: User;
+}
+
+export default function Settings({ user }: SettingsProps) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
@@ -26,19 +35,14 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: authData } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: () => authApi.getCurrentUser(),
-  });
-
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
   });
 
   const [profileData, setProfileData] = useState({
-    fullName: authData?.user?.fullName || "",
-    email: authData?.user?.email || "",
-    role: authData?.user?.role || "employee",
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+    role: user?.role || "employee",
   });
 
   const [systemSettings, setSystemSettings] = useState({
@@ -192,7 +196,7 @@ export default function Settings() {
             <div className="text-center">
               <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 relative">
                 <span className="text-white text-2xl font-semibold">
-                  {authData?.user?.fullName?.split(' ').map(name => name[0]).join('').slice(0, 2) || "U"}
+                  {user?.fullName?.split(' ').map(name => name[0]).join('').slice(0, 2) || "U"}
                 </span>
                 <Button
                   variant="ghost"
@@ -227,239 +231,251 @@ export default function Settings() {
             
             <div>
               <Label htmlFor="role">Rol</Label>
-              <Select value={profileData.role} disabled>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="employee">Empleado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="role"
+                value={profileData.role}
+                onChange={(e) => setProfileData(prev => ({ ...prev, role: e.target.value }))}
+                disabled={!isEditingProfile}
+              />
             </div>
             
-            {isEditingProfile ? (
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditingProfile(false)}
-                  className="flex-1"
+            <div className="flex space-x-2">
+              {isEditingProfile ? (
+                <>
+                  <Button onClick={handleSaveProfile} className="flex-1">
+                    Guardar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditingProfile(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  onClick={() => setIsEditingProfile(true)}
+                  className="w-full"
                 >
-                  Cancelar
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar Perfil
                 </Button>
-                <Button
-                  onClick={handleSaveProfile}
-                  className="flex-1 bg-primary text-white hover:bg-blue-800"
-                >
-                  Guardar
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={() => setIsEditingProfile(true)}
-                className="w-full bg-primary text-white hover:bg-blue-800"
-              >
-                Editar Perfil
-              </Button>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* System Preferences */}
+        {/* System Settings */}
         <Card className="card-shadow">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-800">Preferencias del Sistema</CardTitle>
+            <CardTitle className="text-xl font-semibold text-gray-800">Configuración del Sistema</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            
             <div>
-              <Label htmlFor="currency">Moneda predeterminada</Label>
-              <Select value={systemSettings.defaultCurrency} onValueChange={(value) => 
-                setSystemSettings(prev => ({ ...prev, defaultCurrency: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD - Dólar Estadounidense</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                  <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="currency">Moneda por defecto</Label>
+              <select
+                id="currency"
+                value={systemSettings.defaultCurrency}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, defaultCurrency: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="USD">USD - Dólar Estadounidense</option>
+                <option value="COP">COP - Peso Colombiano</option>
+                <option value="EUR">EUR - Euro</option>
+              </select>
             </div>
             
             <div>
               <Label htmlFor="timezone">Zona horaria</Label>
-              <Select value={systemSettings.timezone} onValueChange={(value) => 
-                setSystemSettings(prev => ({ ...prev, timezone: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="America/Bogota">America/Bogota (UTC-5)</SelectItem>
-                  <SelectItem value="America/New_York">America/New_York (UTC-5)</SelectItem>
-                  <SelectItem value="Europe/Madrid">Europe/Madrid (UTC+1)</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="timezone"
+                value={systemSettings.timezone}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="America/Bogota">America/Bogota</option>
+                <option value="America/New_York">America/New_York</option>
+                <option value="Europe/Madrid">Europe/Madrid</option>
+              </select>
             </div>
             
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="darkMode"
-                  checked={systemSettings.darkMode}
-                  onCheckedChange={(checked) => 
-                    setSystemSettings(prev => ({ ...prev, darkMode: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="darkMode" className="text-sm font-medium text-gray-700">
-                  Modo oscuro
-                </Label>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="darkMode">Modo oscuro</Label>
+                <p className="text-sm text-gray-500">Cambiar entre tema claro y oscuro</p>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="emailNotifications"
-                  checked={systemSettings.emailNotifications}
-                  onCheckedChange={(checked) => 
-                    setSystemSettings(prev => ({ ...prev, emailNotifications: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="emailNotifications" className="text-sm font-medium text-gray-700">
-                  Notificaciones por email
-                </Label>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="telegramNotifications"
-                  checked={systemSettings.telegramNotifications}
-                  onCheckedChange={(checked) => 
-                    setSystemSettings(prev => ({ ...prev, telegramNotifications: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="telegramNotifications" className="text-sm font-medium text-gray-700">
-                  Notificaciones de Telegram
-                </Label>
-              </div>
+              <input
+                type="checkbox"
+                id="darkMode"
+                checked={systemSettings.darkMode}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, darkMode: e.target.checked }))}
+                className="w-4 h-4 text-primary"
+              />
             </div>
             
-            <Button className="w-full bg-secondary text-white hover:bg-green-700">
-              Guardar Preferencias
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="emailNotifications">Notificaciones por email</Label>
+                <p className="text-sm text-gray-500">Recibir alertas por correo electrónico</p>
+              </div>
+              <input
+                type="checkbox"
+                id="emailNotifications"
+                checked={systemSettings.emailNotifications}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, emailNotifications: e.target.checked }))}
+                className="w-4 h-4 text-primary"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="telegramNotifications">Notificaciones de Telegram</Label>
+                <p className="text-sm text-gray-500">Recibir alertas en Telegram</p>
+              </div>
+              <input
+                type="checkbox"
+                id="telegramNotifications"
+                checked={systemSettings.telegramNotifications}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, telegramNotifications: e.target.checked }))}
+                className="w-4 h-4 text-primary"
+              />
+            </div>
+            
+            <Button className="w-full">
+              Guardar Configuración
             </Button>
           </CardContent>
         </Card>
 
-        {/* Categories Management */}
+        {/* Quick Stats */}
         <Card className="card-shadow">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-gray-800">Categorías</CardTitle>
-              <Button
-                onClick={() => {
-                  setEditingCategory(null);
-                  resetCategoryForm();
-                  setIsCategoryModalOpen(true);
-                }}
-                className="bg-secondary text-white hover:bg-green-700"
-                size="sm"
-              >
-                <Plus className="mr-1" size={16} />
-                Agregar
-              </Button>
-            </div>
+            <CardTitle className="text-xl font-semibold text-gray-800">Estadísticas Rápidas</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Gastos</h4>
-                <div className="space-y-2">
-                  {expenseCategories.map((category: any) => (
-                    <div key={category.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div 
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        ></div>
-                        <span className="font-medium text-gray-800">{category.name}</span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleEditCategory(category)}
-                          className="text-primary hover:text-blue-800"
-                        >
-                          <Edit size={14} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleDeleteCategory(category.id)}
-                          className="text-error hover:text-red-800"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {incomeCategories.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Ingresos</h4>
-                  <div className="space-y-2">
-                    {incomeCategories.map((category: any) => (
-                      <div key={category.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          ></div>
-                          <span className="font-medium text-gray-800">{category.name}</span>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditCategory(category)}
-                            className="text-primary hover:text-blue-800"
-                          >
-                            <Edit size={14} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="text-error hover:text-red-800"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary">12</div>
+              <p className="text-sm text-gray-600">Transacciones este mes</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">$2,450</div>
+              <p className="text-sm text-gray-600">Ingresos totales</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-red-600">$1,230</div>
+              <p className="text-sm text-gray-600">Gastos totales</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">$1,220</div>
+              <p className="text-sm text-gray-600">Balance neto</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Categories Management */}
+      <Card className="card-shadow">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-xl font-semibold text-gray-800">Gestión de Categorías</CardTitle>
+          <Button onClick={() => setIsCategoryModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Categoría
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Expense Categories */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Categorías de Gastos</h3>
+              <div className="space-y-2">
+                {expenseCategories.map((category: any) => (
+                  <div key={category.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: category.color }}
+                      />
+                      <span className="font-medium">{category.name}</span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCategory(category)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {expenseCategories.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">No hay categorías de gastos</p>
+                )}
+              </div>
+            </div>
+
+            {/* Income Categories */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Categorías de Ingresos</h3>
+              <div className="space-y-2">
+                {incomeCategories.map((category: any) => (
+                  <div key={category.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: category.color }}
+                      />
+                      <span className="font-medium">{category.name}</span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCategory(category)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {incomeCategories.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">No hay categorías de ingresos</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Category Modal */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
             </DialogTitle>
           </DialogHeader>
-          
           <form onSubmit={handleSubmitCategory} className="space-y-4">
             <div>
-              <Label htmlFor="categoryName">Nombre de la categoría</Label>
+              <Label htmlFor="categoryName">Nombre</Label>
               <Input
                 id="categoryName"
                 value={newCategory.name}
@@ -471,18 +487,16 @@ export default function Settings() {
             
             <div>
               <Label htmlFor="categoryType">Tipo</Label>
-              <Select 
-                value={newCategory.type} 
-                onValueChange={(value) => setNewCategory(prev => ({ ...prev, type: value }))}
+              <select
+                id="categoryType"
+                value={newCategory.type}
+                onChange={(e) => setNewCategory(prev => ({ ...prev, type: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                required
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expense">Gasto</SelectItem>
-                  <SelectItem value="income">Ingreso</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="expense">Gasto</option>
+                <option value="income">Ingreso</option>
+              </select>
             </div>
             
             <div>
@@ -492,20 +506,23 @@ export default function Settings() {
                   <button
                     key={color}
                     type="button"
-                    onClick={() => setNewCategory(prev => ({ ...prev, color }))}
                     className={`w-8 h-8 rounded-full border-2 ${
-                      newCategory.color === color ? 'border-gray-800' : 'border-gray-300'
+                      newCategory.color === color ? "border-gray-800" : "border-gray-300"
                     }`}
                     style={{ backgroundColor: color }}
+                    onClick={() => setNewCategory(prev => ({ ...prev, color }))}
                   />
                 ))}
               </div>
             </div>
             
-            <div className="flex space-x-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
+            <div className="flex space-x-2">
+              <Button type="submit" className="flex-1">
+                {editingCategory ? "Actualizar" : "Crear"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
                 onClick={() => {
                   setIsCategoryModalOpen(false);
                   setEditingCategory(null);
@@ -514,16 +531,6 @@ export default function Settings() {
                 className="flex-1"
               >
                 Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
-                className="flex-1 bg-primary text-white hover:bg-blue-800"
-              >
-                {createCategoryMutation.isPending || updateCategoryMutation.isPending 
-                  ? "Guardando..." 
-                  : editingCategory ? "Actualizar" : "Crear"
-                }
               </Button>
             </div>
           </form>

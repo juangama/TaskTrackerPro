@@ -10,7 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ChartLine, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 
-export default function Login() {
+interface LoginProps {
+  onLoginSuccess?: (data: any) => void;
+}
+
+export default function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("demo123");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,6 +30,10 @@ export default function Login() {
         title: "Inicio de sesión exitoso",
         description: `Bienvenido, ${data.user.fullName}`,
       });
+      // Llamar a la función callback si existe
+      if (onLoginSuccess) {
+        onLoginSuccess(data);
+      }
     },
     onError: () => {
       toast({

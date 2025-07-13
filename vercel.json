@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "server/index.ts", "use": "@vercel/node" },
-    { "src": "client/index.html", "use": "@vercel/static" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/server/index.ts" },
-    { "src": "/(.*)", "dest": "/client/index.html" }
-  ]
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30
+    }
+  }
 }
