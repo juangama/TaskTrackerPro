@@ -448,13 +448,17 @@ export class DatabaseStorage implements IStorage {
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     try {
+      console.log("Storage: Creating category with data:", insertCategory);
+      
       const [category] = await db
         .insert(categories)
         .values(insertCategory)
         .returning();
+      
+      console.log("Storage: Category created successfully:", category);
       return category;
     } catch (error) {
-      console.error('Database error in createCategory:', error);
+      console.error("Storage: Error creating category:", error);
       throw error;
     }
   }

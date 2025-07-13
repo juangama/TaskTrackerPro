@@ -223,27 +223,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/categories", requireAuth, async (req, res) => {
     try {
+      console.log("=== CREATE CATEGORY START ===");
+      console.log("Request body:", req.body);
+      console.log("User ID:", req.userId);
+      
       const categoryData = insertCategorySchema.parse(req.body);
+      console.log("Validated category data:", categoryData);
+      
       const category = await storage.createCategory(categoryData);
+      console.log("Category created successfully:", category);
       res.status(201).json(category);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid category data" });
+    } catch (error: unknown) {
+      console.error("=== CREATE CATEGORY ERROR ===");
+      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("Full error:", error);
+      
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Error de validación en los datos de la categoría", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error interno del servidor al crear la categoría",
+        details: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   });
 
   app.put("/api/categories/:id", requireAuth, async (req, res) => {
     try {
+      console.log("=== UPDATE CATEGORY START ===");
+      console.log("Category ID:", req.params.id);
+      console.log("Request body:", req.body);
+      
       const id = parseInt(req.params.id);
       const updates = insertCategorySchema.partial().parse(req.body);
+      console.log("Validated update data:", updates);
+      
       const category = await storage.updateCategory(id, updates);
       
       if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
       
+      console.log("Category updated successfully:", category);
       res.json(category);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid category data" });
+    } catch (error: unknown) {
+      console.error("=== UPDATE CATEGORY ERROR ===");
+      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("Full error:", error);
+      
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Error de validación en los datos de la categoría", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error interno del servidor al actualizar la categoría",
+        details: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   });
 
@@ -321,8 +373,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(account);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid account data" });
+    } catch (error: unknown) {
+      console.error("=== UPDATE ACCOUNT ERROR ===");
+      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("Full error:", error);
+      
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Error de validación en los datos de la cuenta", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error interno del servidor al actualizar la cuenta",
+        details: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   });
 
