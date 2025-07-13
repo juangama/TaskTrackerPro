@@ -13,10 +13,12 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/client/index.html"
+      "dest": "/server/index.ts"
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
+  "functions": {
+    "server/index.ts": {
+      "maxDuration": 30
+    }
   }
-} 
+}

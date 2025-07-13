@@ -68,26 +68,14 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // For Vercel, serve from the built client files
-  const distPath = process.env.VERCEL 
-    ? path.resolve(import.meta.dirname, "..", "dist", "public")
-    : path.resolve(import.meta.dirname, "public");
-
-  if (!fs.existsSync(distPath)) {
-    console.warn(`Build directory not found: ${distPath}, serving development files`);
-    // Fallback to client directory for development
-    const clientPath = path.resolve(import.meta.dirname, "..", "client");
-    app.use(express.static(clientPath));
-    app.use("*", (_req, res) => {
-      res.sendFile(path.resolve(clientPath, "index.html"));
-    });
-    return;
-  }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
+  // For Vercel, serve from the client directory directly
+  const clientPath = path.resolve(import.meta.dirname, "..", "client");
+  
+  // Serve static files from client directory
+  app.use(express.static(clientPath));
+  
+  // Serve all routes to index.html for SPA
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(clientPath, "index.html"));
   });
 }
