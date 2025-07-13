@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,11 @@ import { CloudUpload } from "lucide-react";
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: any;
+  mode?: 'create' | 'edit';
 }
 
-export default function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
+export default function TransactionModal({ isOpen, onClose, initialData, mode = 'create' }: TransactionModalProps) {
   const [formData, setFormData] = useState({
     type: "expense",
     amount: "",
@@ -25,48 +27,85 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
     accountId: "",
     paymentMethod: "cash",
     notes: "",
+    transactionDate: new Date().toISOString().split('T')[0], // Default to today
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        type: initialData.type || "expense",
+        amount: initialData.amount?.toString() || "",
+        description: initialData.description || "",
+        thirdParty: initialData.thirdParty || "",
+        categoryId: initialData.categoryId?.toString() || "",
+        accountId: initialData.accountId?.toString() || "",
+        paymentMethod: initialData.paymentMethod || "cash",
+        notes: initialData.notes || "",
+        transactionDate: initialData.transactionDate ? initialData.transactionDate.split('T')[0] : new Date().toISOString().split('T')[0],
+      });
+    } else {
+      setFormData({
+        type: "expense",
+        amount: "",
+        description: "",
+        thirdParty: "",
+        categoryId: "",
+        accountId: "",
+        paymentMethod: "cash",
+        notes: "",
+        transactionDate: new Date().toISOString().split('T')[0],
+      });
+    }
+  }, [initialData, isOpen]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/categories"],
     enabled: isOpen,
   });
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [] } = useQuery<any[]>({
     queryKey: ["/api/accounts"],
     enabled: isOpen,
   });
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("API request data:", data);
-      const response = await apiRequest("POST", "/api/transactions", data);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      if (mode === 'edit' && initialData?.id) {
+        // PUT para editar
+        const response = await apiRequest("PUT", `/api/transactions/${initialData.id}`, data);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+        return response.json();
+      } else {
+        // POST para crear
+        const response = await apiRequest("POST", "/api/transactions", data);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+        return response.json();
       }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
       toast({
-        title: "Transacción creada",
-        description: "La transacción se ha registrado exitosamente",
+        title: mode === 'edit' ? "Transacción actualizada" : "Transacción creada",
+        description: mode === 'edit' ? "La transacción se ha actualizado exitosamente" : "La transacción se ha registrado exitosamente",
       });
       onClose();
       resetForm();
     },
     onError: (error: any) => {
-      console.error("Transaction error:", error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear la transacción",
+        description: error.message || "No se pudo guardar la transacción",
         variant: "destructive",
       });
     },
@@ -82,13 +121,14 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
       accountId: "",
       paymentMethod: "cash",
       notes: "",
+      transactionDate: new Date().toISOString().split('T')[0],
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.amount || !formData.description || !formData.categoryId || !formData.accountId) {
+    if (!formData.amount || !formData.description || !formData.categoryId || !formData.accountId || !formData.transactionDate) {
       toast({
         title: "Campos requeridos",
         description: "Por favor completa todos los campos obligatorios",
@@ -106,6 +146,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
       accountId: parseInt(formData.accountId),
       paymentMethod: formData.paymentMethod,
       notes: formData.notes,
+      transactionDate: formData.transactionDate, // Enviar solo la fecha sin concatenar
     };
 
     console.log("Submitting transaction:", transactionData);
@@ -124,7 +165,9 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-800">Nueva Transacción</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-gray-800">
+            {mode === 'edit' ? 'Editar Transacción' : 'Nueva Transacción'}
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -142,6 +185,19 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
                   <SelectItem value="income">Ingreso</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="transactionDate" className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de Transacción *
+              </Label>
+              <Input
+                id="transactionDate"
+                type="date"
+                value={formData.transactionDate}
+                onChange={(e) => handleChange("transactionDate", e.target.value)}
+                required
+              />
             </div>
             
             <div>
@@ -283,7 +339,9 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
               disabled={createTransactionMutation.isPending}
               className="flex-1 bg-primary text-white hover:bg-blue-800"
             >
-              {createTransactionMutation.isPending ? "Guardando..." : "Guardar Transacción"}
+              {createTransactionMutation.isPending
+                ? (mode === 'edit' ? "Guardando..." : "Guardando...")
+                : (mode === 'edit' ? "Guardar Cambios" : "Guardar Transacción")}
             </Button>
           </div>
         </form>

@@ -12,17 +12,19 @@ import TransactionModal from "@/components/modals/transaction-modal";
 
 export default function Transactions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading } = useQuery({
+  const { data: transactions = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/transactions"],
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -164,7 +166,7 @@ export default function Transactions() {
                 {filteredTransactions.map((transaction: any) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(transaction.transactionDate).toLocaleDateString()}
+                      {transaction.transactionDate ? new Date(transaction.transactionDate).toLocaleDateString('es-ES') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{transaction.description}</div>
@@ -201,7 +203,15 @@ export default function Transactions() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-blue-800">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-primary hover:text-blue-800"
+                        onClick={() => {
+                          setTransactionToEdit(transaction);
+                          setEditModalOpen(true);
+                        }}
+                      >
                         <Edit size={16} />
                       </Button>
                       <Button 
@@ -251,6 +261,15 @@ export default function Transactions() {
       <TransactionModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+      />
+      <TransactionModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setTransactionToEdit(null);
+        }}
+        initialData={transactionToEdit}
+        mode="edit"
       />
     </div>
   );

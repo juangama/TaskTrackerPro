@@ -17,20 +17,68 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
+interface SummaryData {
+  totalBalance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  pendingLoans: number;
+  netCashFlow: number;
+  incomeChangePercent: number;
+  expenseChangePercent: number;
+  prevMonthIncome: number;
+  prevMonthExpenses: number;
+}
+
+interface MonthlyTrendData {
+  month: string;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+interface ExpensesByCategory {
+  [key: string]: number;
+}
+
+interface Transaction {
+  id: number;
+  type: string;
+  amount: string;
+  description: string;
+  thirdParty: string;
+  categoryId: number;
+  accountId: number;
+  paymentMethod: string;
+  notes: string;
+  transactionDate: string;
+  createdAt: string;
+  category?: {
+    id: number;
+    name: string;
+    color: string;
+  };
+  account?: {
+    id: number;
+    name: string;
+    type: string;
+    balance: string;
+  };
+}
+
 export default function Dashboard() {
-  const { data: summary } = useQuery({
+  const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/analytics/summary"],
   });
 
-  const { data: expensesByCategory = {} } = useQuery({
+  const { data: expensesByCategory = {} } = useQuery<ExpensesByCategory>({
     queryKey: ["/api/analytics/expenses-by-category"],
   });
 
-  const { data: monthlyTrends = [] } = useQuery({
+  const { data: monthlyTrends = [] } = useQuery<MonthlyTrendData[]>({
     queryKey: ["/api/analytics/monthly-trends"],
   });
 
-  const { data: recentTransactions = [] } = useQuery({
+  const { data: recentTransactions = [] } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
   });
 
@@ -161,9 +209,9 @@ export default function Dashboard() {
                 </p>
                 {summary && summary.pendingLoans !== undefined && (
                   <div className="flex items-center mt-2">
-                    <ArrowDown className="text-success text-sm mr-1" size={16} />
-                    <span className="text-success text-sm font-medium">
-                      Préstamos totales
+                    <ArrowDown className="text-error text-sm mr-1" size={16} />
+                    <span className="text-error text-sm font-medium">
+                      Deuda pendiente
                     </span>
                   </div>
                 )}

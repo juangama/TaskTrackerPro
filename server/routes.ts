@@ -11,6 +11,63 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Account creation schema (without userId, it will be added automatically)
+const createAccountSchema = z.object({
+  name: z.string().min(1, "El nombre de la cuenta es requerido"),
+  type: z.string().min(1, "El tipo de cuenta es requerido"),
+  balance: z.union([z.string(), z.number()]).transform(val => String(val)),
+  bankName: z.string().optional(),
+  accountNumber: z.string().optional(),
+});
+
+// Transaction creation schema with proper validation
+const createTransactionSchema = z.object({
+  type: z.enum(["expense", "income"]),
+  amount: z.string().min(1, "El monto es requerido"),
+  description: z.string().min(1, "La descripción es requerida"),
+  thirdParty: z.string().optional(),
+  categoryId: z.union([z.string(), z.number()]).transform(val => parseInt(val.toString())),
+  accountId: z.union([z.string(), z.number()]).transform(val => parseInt(val.toString())),
+  paymentMethod: z.string().optional(),
+  notes: z.string().optional(),
+  transactionDate: z.string().min(1, "La fecha de transacción es requerida").transform((val) => {
+    // Asegurar que la fecha esté en formato ISO
+    const date = new Date(val);
+    if (isNaN(date.getTime())) {
+      throw new Error("Fecha inválida");
+    }
+    return val;
+  }),
+});
+
+// Transaction update schema (all fields optional)
+const updateTransactionSchema = z.object({
+  type: z.enum(["expense", "income"]).optional(),
+  amount: z.string().min(1, "El monto es requerido").optional(),
+  description: z.string().min(1, "La descripción es requerida").optional(),
+  thirdParty: z.string().optional(),
+  categoryId: z.union([z.string(), z.number()]).transform(val => parseInt(val.toString())).optional(),
+  accountId: z.union([z.string(), z.number()]).transform(val => parseInt(val.toString())).optional(),
+  paymentMethod: z.string().optional(),
+  notes: z.string().optional(),
+  transactionDate: z.string().min(1, "La fecha de transacción es requerida").transform((val) => {
+    // Asegurar que la fecha esté en formato ISO
+    const date = new Date(val);
+    if (isNaN(date.getTime())) {
+      throw new Error("Fecha inválida");
+    }
+    return val;
+  }).optional(),
+});
+
+// Registration schema
+const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+});
+
 // Extend Request interface to include session and userId
 declare module 'express-serve-static-core' {
   interface Request {
@@ -82,6 +139,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { username, email, password, fullName } = registerSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Create new user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        password, // In production, this should be hashed
+        fullName,
+        role: "employee", // Default role for new users
+      });
+
+      // Auto-login after registration
+      req.session!.userId = newUser.id;
+      
+      res.status(201).json({ 
+        user: { 
+          id: newUser.id, 
+          username: newUser.username, 
+          email: newUser.email, 
+          fullName: newUser.fullName, 
+          role: newUser.role 
+        } 
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Error de validación", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error interno del servidor. Por favor, intenta de nuevo." 
+      });
+    }
+  });
+
   // Categories routes
   app.get("/api/categories", requireAuth, async (req, res) => {
     const categories = await storage.getAllCategories();
@@ -133,11 +246,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/accounts", requireAuth, async (req, res) => {
     try {
-      const accountData = insertAccountSchema.parse({ ...req.body, userId: req.userId! });
+      console.log("=== CREATE ACCOUNT START ===");
+      console.log("Request body:", req.body);
+      console.log("User ID:", req.userId);
+      
+      // Validate the incoming data
+      const validatedData = createAccountSchema.parse(req.body);
+      console.log("Validated account data:", validatedData);
+      
+      // Create the account with userId
+      const accountData = {
+        ...validatedData,
+        userId: req.userId!,
+        balance: validatedData.balance, // Keep as string, storage will handle conversion
+      };
+      
+      console.log("Final account data:", accountData);
+      
       const account = await storage.createAccount(accountData);
+      console.log("Account created successfully:", account);
       res.status(201).json(account);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid account data" });
+    } catch (error: unknown) {
+      console.error("=== CREATE ACCOUNT ERROR ===");
+      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      console.error("Full error:", error);
+      
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Error de validación en los datos de la cuenta", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error interno del servidor al crear la cuenta",
+        details: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   });
 
@@ -200,27 +349,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const transactionData = insertTransactionSchema.parse({ ...req.body, userId: req.userId! });
+      console.log("Received transaction data:", req.body);
+      
+      // Validate the incoming data with our custom schema
+      const validatedData = createTransactionSchema.parse(req.body);
+      console.log("Validated transaction data:", validatedData);
+      
+      // Transform the data for the database
+      const transactionData = {
+        ...validatedData,
+        userId: req.userId!,
+        transactionDate: new Date(validatedData.transactionDate + 'T12:00:00.000Z'), // Usar mediodía para evitar problemas de zona horaria
+      };
+      
+      // Validar que la fecha sea válida
+      if (isNaN(transactionData.transactionDate.getTime())) {
+        return res.status(400).json({ 
+          message: "Fecha inválida", 
+          error: "La fecha proporcionada no es válida" 
+        });
+      }
+      
+      console.log("Final transaction data:", transactionData);
+      console.log("Transaction date type:", typeof transactionData.transactionDate);
+      console.log("Transaction date value:", transactionData.transactionDate);
       const transaction = await storage.createTransaction(transactionData);
+      console.log("Created transaction:", transaction);
       res.status(201).json(transaction);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid transaction data" });
+    } catch (error: any) {
+      console.error("Transaction creation error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Error de validación", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      res.status(400).json({ message: "Invalid transaction data", error: error.message });
     }
   });
 
   app.put("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
+      console.log("Received update data:", req.body);
+      
       const id = parseInt(req.params.id);
-      const updates = insertTransactionSchema.partial().parse(req.body);
-      const transaction = await storage.updateTransaction(id, updates);
+      const validatedUpdates = updateTransactionSchema.parse(req.body);
+      console.log("Validated update data:", validatedUpdates);
+      
+      // Transform the data for the database
+      const updateData: any = { ...validatedUpdates };
+      if (validatedUpdates.transactionDate) {
+        const transactionDate = new Date(validatedUpdates.transactionDate + 'T12:00:00.000Z');
+        
+        // Validar que la fecha sea válida
+        if (isNaN(transactionDate.getTime())) {
+          return res.status(400).json({ 
+            message: "Fecha inválida", 
+            error: "La fecha proporcionada no es válida" 
+          });
+        }
+        
+        updateData.transactionDate = transactionDate;
+      }
+      
+      console.log("Final update data:", updateData);
+      const transaction = await storage.updateTransaction(id, updateData);
       
       if (!transaction) {
         return res.status(404).json({ message: "Transaction not found" });
       }
       
+      console.log("Updated transaction:", transaction);
       res.json(transaction);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid transaction data" });
+    } catch (error: any) {
+      console.error("Transaction update error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Error de validación", 
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      res.status(400).json({ message: "Invalid transaction data", error: error.message });
     }
   });
 
@@ -253,11 +468,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     const monthlyIncome = monthlyTransactions
-      .filter(t => t.type === "income")
+      .filter(t => t.type === "income" && t.thirdParty !== "Transferencia" && !t.description?.includes("Pago de préstamo"))
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
     
     const monthlyExpenses = monthlyTransactions
-      .filter(t => t.type === "expense")
+      .filter(t => t.type === "expense" && t.thirdParty !== "Transferencia" && !t.description?.includes("Pago de préstamo"))
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
     // Previous month calculations for comparison
@@ -270,11 +485,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     const prevMonthIncome = prevMonthTransactions
-      .filter(t => t.type === "income")
+      .filter(t => t.type === "income" && t.thirdParty !== "Transferencia" && !t.description?.includes("Pago de préstamo"))
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
     
     const prevMonthExpenses = prevMonthTransactions
-      .filter(t => t.type === "expense")
+      .filter(t => t.type === "expense" && t.thirdParty !== "Transferencia" && !t.description?.includes("Pago de préstamo"))
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
     // Calculate percentage changes
@@ -282,8 +497,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const expenseChange = prevMonthExpenses > 0 ? ((monthlyExpenses - prevMonthExpenses) / prevMonthExpenses) * 100 : 0;
     
     const pendingLoans = accounts
-      .filter(a => a.type === "loan")
-      .reduce((sum, account) => sum + Math.abs(parseFloat(account.balance)), 0);
+      .filter(a => a.type === "loan" || a.type === "credit")
+      .reduce((sum, account) => sum + Math.max(0, parseFloat(account.balance)), 0);
     
     res.json({
       totalBalance,
@@ -302,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const transactions = await storage.getTransactionsByUserId(req.userId!);
     const categories = await storage.getAllCategories();
     
-    const expenses = transactions.filter(t => t.type === "expense");
+    const expenses = transactions.filter(t => t.type === "expense" && t.thirdParty !== "Transferencia" && !t.description?.includes("Pago de préstamo"));
     const categoriesMap = new Map(categories.map(c => [c.id, c]));
     
     const expensesByCategory = expenses.reduce((acc, transaction) => {
@@ -330,9 +545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const amount = parseFloat(transaction.amount);
-      if (transaction.type === "income") {
+      if (transaction.type === "income" && transaction.thirdParty !== "Transferencia" && !transaction.description?.includes("Pago de préstamo")) {
         monthlyData[monthKey].income += amount;
-      } else {
+      } else if (transaction.type === "expense" && transaction.thirdParty !== "Transferencia" && !transaction.description?.includes("Pago de préstamo")) {
         monthlyData[monthKey].expenses += amount;
       }
     });

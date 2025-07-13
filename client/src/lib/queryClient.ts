@@ -12,7 +12,12 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Ensure URL starts with /api for server routes
+  const fullUrl = url.startsWith('/') ? url : `/${url}`;
+  
+  console.log(`API Request: ${method} ${fullUrl}`, data ? { ...data, password: '***' } : 'No data');
+  
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,

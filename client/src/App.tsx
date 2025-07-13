@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "./lib/auth";
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import Transactions from "@/pages/transactions";
 import Accounts from "@/pages/accounts";
@@ -35,7 +36,13 @@ function AppContent() {
   }
 
   if (error || !authData) {
-    return <Login />;
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route component={Login} />
+      </Switch>
+    );
   }
 
   return (

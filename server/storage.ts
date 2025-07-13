@@ -448,11 +448,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
-    const [account] = await db
-      .insert(accounts)
-      .values(insertAccount)
-      .returning();
-    return account;
+    console.log("Storage: Creating account with data:", insertAccount);
+    
+    try {
+      const [account] = await db
+        .insert(accounts)
+        .values(insertAccount)
+        .returning();
+      
+      console.log("Storage: Account created successfully:", account);
+      return account;
+    } catch (error) {
+      console.error("Storage: Error creating account:", error);
+      throw error;
+    }
   }
 
   async updateAccount(id: number, updates: Partial<InsertAccount>): Promise<Account | undefined> {
